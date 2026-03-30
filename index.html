@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>振替申請 - ツクル</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        /* ツクル・ブランドカラー・スタイル */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #fdfdfd; padding: 15px; margin: 0; color: #333; }
+        .card { background: white; padding: 25px 20px; border-radius: 16px; border-top: 10px solid #FFD700; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 450px; margin: 0 auto; }
+        .logo-text { text-align: center; font-weight: bold; color: #FFD700; font-size: 2.2em; margin-bottom: 5px; text-shadow: 1px 1px 0 rgba(0,0,0,0.05); }
+        h2 { text-align: center; margin-bottom: 25px; color: #444; font-size: 1.1em; }
+        
+        label { display: block; margin-top: 18px; font-weight: bold; font-size: 0.85em; color: #666; }
+        input, select { width: 100%; padding: 12px; margin-top: 6px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; -webkit-appearance: none; }
+        input:focus { border-color: #FFD700; outline: none; background-color: white; }
+
+        button { width: 100%; padding: 16px; background-color: #FFD700; color: #333; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; margin-top: 30px; cursor: pointer; box-shadow: 0 4px 0 #e6c200; transition: all 0.1s; }
+        button:active { transform: translateY(2px); box-shadow: none; }
+        
+        #loading { display: none; text-align: center; margin-top: 20px; color: #888; font-size: 0.9em; }
+        .footer-note { text-align: center; font-size: 0.7em; color: #aaa; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo-text">ツクル</div>
+        <h2>振替申請フォーム</h2>
+        
+        <label>生徒のお名前</label>
+        <input type="text" id="name" placeholder="例：ツクル 太郎">
+
+        <label>欠席日</label>
+        <input type="date" id="date_off">
+
+        <label>欠席理由</label>
+        <select id="reason">
+            <option value="自己都合（私用・体調不良など）">自己都合（私用・体調不良など）</option>
+        </select>
+
+        <label>振替希望日</label>
+        <input type="date" id="date_on">
+
+        <button onclick="submitForm()">申請を送信する</button>
+        <div id="loading">送信中...<br>そのままお待ちください</div>
+        <div class="footer-note">© Programming School ツクル</div>
+    </div>
+
+    <script>
+        // --- ★ここをご自身のものに書き換えてください★ ---
+        const LIFF_ID = "あなたのLIFF ID"; 
+        const GAS_URL = "あなたのGASウェブアプリURL"; 
+        // ----------------------------------------------
+
+        let uid = "";
+        const params = new URLSearchParams(window.location.search);
+
+        // LIFF初期化
+        liff.init({ liffId: LIFF_ID }).then(() => {
+            if (!liff.isLoggedIn()) {
+                liff.login();
+            } else {
+                liff.getProfile().then(p => uid = p.userId);
+            }
+
+            // 特殊URL判定 (?reason=school の場合)
+            if (params.get('reason') === 'school') {
+                const sel = document.getElementById('reason');
+                const opt = document.createElement('option');
+                opt.value = opt.text = "スクール都合（祝日・講師都合など）";
+                sel.add(opt, 0);
+                sel.value = opt.value;
+                sel.disabled = true; // ユーザーは変更不可
+            }
+        });
+
+        function submitForm() {
+            const name = document.getElementById('name').value;
+            const d_off = document.getElementById('date_off').value;
+            const reason = document.getElementById('reason').value;
+            const d_on = document.getElementById('date_on').value;
+
+            if (!name || !d_off || !d_on) return alert("すべての項目を入力してください");
+            
+            if (!confirm(`${name}様、申請を送信してもよろしいですか？`)) return;
+
+            document.getElementById('loading').style.display = "block";
+            
+            fetch(GAS_URL, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify({ userId: uid, name, date_off: d_off, reason, date_on: d_on })
+            }).then(() => {
+                alert("送信が完了しました！\nLINEに届く通知をご確認ください。");
+                liff.closeWindow();
+            }).catch(e => {
+                alert("エラーが発生しました。時間を置いて再度お試しください。");
+                document.getElementById('loading').style.display = "none";
+            });
+        }
+    </script>
+</body>
+</html>
