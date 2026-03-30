@@ -1,103 +1,126 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>振替申請 - ツクル</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        /* ツクル・ブランドカラー・スタイル */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #fdfdfd; padding: 15px; margin: 0; color: #333; }
-        .card { background: white; padding: 25px 20px; border-radius: 16px; border-top: 10px solid #FFD700; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 450px; margin: 0 auto; }
-        .logo-text { text-align: center; font-weight: bold; color: #FFD700; font-size: 2.2em; margin-bottom: 5px; text-shadow: 1px 1px 0 rgba(0,0,0,0.05); }
-        h2 { text-align: center; margin-bottom: 25px; color: #444; font-size: 1.1em; }
-        
-        label { display: block; margin-top: 18px; font-weight: bold; font-size: 0.85em; color: #666; }
-        input, select { width: 100%; padding: 12px; margin-top: 6px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; -webkit-appearance: none; }
-        input:focus { border-color: #FFD700; outline: none; background-color: white; }
-
-        button { width: 100%; padding: 16px; background-color: #FFD700; color: #333; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; margin-top: 30px; cursor: pointer; box-shadow: 0 4px 0 #e6c200; transition: all 0.1s; }
-        button:active { transform: translateY(2px); box-shadow: none; }
-        
-        #loading { display: none; text-align: center; margin-top: 20px; color: #888; font-size: 0.9em; }
-        .footer-note { text-align: center; font-size: 0.7em; color: #aaa; margin-top: 20px; }
+        body { font-family: sans-serif; background-color: #fdfdfd; padding: 15px; margin: 0; color: #333; }
+        .card { background: white; padding: 25px 20px; border-radius: 16px; border-top: 10px solid #FFD700; box-shadow: 0 4px 15px rgba(0,0,0,0.08); max-width: 450px; margin: 0 auto; }
+        .logo { text-align: center; font-weight: bold; color: #FFD700; font-size: 2em; margin-bottom: 10px; }
+        .info { background: #fff9e6; padding: 10px; border-radius: 8px; font-size: 0.8em; margin-bottom: 15px; border: 1px solid #FFD700; }
+        label { display: block; margin-top: 15px; font-weight: bold; font-size: 0.9em; }
+        .sub-label { font-size: 0.75em; color: #888; font-weight: normal; margin-left: 5px; }
+        input, select, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; background: #fafafa; }
+        .radio-group { display: flex; gap: 10px; margin-top: 10px; }
+        .radio-group label { margin: 0; flex: 1; text-align: center; background: #f0f0f0; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: normal; }
+        .radio-group input { display: none; }
+        .radio-group input:checked + label { background: #FFD700; font-weight: bold; }
+        button { width: 100%; padding: 16px; background-color: #FFD700; color: #333; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; margin-top: 25px; box-shadow: 0 4px 0 #e6c200; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div class="logo-text">ツクル</div>
-        <h2>振替申請フォーム</h2>
+        <div class="logo">ツクル</div>
+        <div class="info">※欠席した翌月の通常授業に時間を追加して受講いただけます。</div>
         
         <label>生徒のお名前</label>
         <input type="text" id="name" placeholder="例：ツクル 太郎">
 
         <label>欠席日</label>
-        <input type="date" id="date_off">
+        <input type="date" id="date_off" onchange="updateTransferConstraints()">
 
-        <label>欠席理由</label>
-        <select id="reason">
-            <option value="自己都合（私用・体調不良など）">自己都合（私用・体調不良など）</option>
-        </select>
+        <label>具体的な理由</label>
+        <textarea id="reason_detail" rows="2" placeholder="体調不良のため、家庭の用事のためなど"></textarea>
 
-        <label>振替希望日</label>
-        <input type="date" id="date_on">
+        <label>振替を希望しますか？</label>
+        <div class="radio-group">
+            <input type="radio" name="needs_transfer" id="need_yes" value="はい" checked onclick="toggleUI()">
+            <label for="need_yes">はい</label>
+            <input type="radio" name="needs_transfer" id="need_no" value="いいえ" onclick="toggleUI()">
+            <label for="need_no">いいえ</label>
+        </div>
+
+        <div id="transfer_section">
+            <label>振替の形式</label>
+            <div class="radio-group">
+                <input type="radio" name="type" id="type_90" value="90min" checked onclick="toggleUI()">
+                <label for="type_90">90分 × 1回</label>
+                <input type="radio" name="type" id="type_30" value="30min" onclick="toggleUI()">
+                <label for="type_30">30分ずつ追加</label>
+            </div>
+
+            <div id="date_1_area">
+                <label>振替希望日1<span class="sub-label">（必須）</span></label>
+                <input type="date" id="date_on_1" class="t-date">
+            </div>
+            
+            <div id="date_extra_area" class="hidden">
+                <label>振替希望日2<span class="sub-label">（任意：あれば選択）</span></label>
+                <input type="date" id="date_on_2" class="t-date">
+                <label>振替希望日3<span class="sub-label">（任意：あれば選択）</span></label>
+                <input type="date" id="date_on_3" class="t-date">
+                <p style="font-size:0.7em; color:#888; margin-top:5px;">※30分追加を最大3回まで選べます。ご都合の良い日を1〜3日分選んでください。</p>
+            </div>
+        </div>
 
         <button onclick="submitForm()">申請を送信する</button>
-        <div id="loading">送信中...<br>そのままお待ちください</div>
-        <div class="footer-note">© Programming School ツクル</div>
+        <div id="loading" class="hidden" style="text-align:center; margin-top:10px;">送信中...</div>
     </div>
 
     <script>
-        // --- ★ここをご自身のものに書き換えてください★ ---
         const LIFF_ID = "あなたのLIFF ID"; 
         const GAS_URL = "あなたのGASウェブアプリURL"; 
-        // ----------------------------------------------
-
         let uid = "";
-        const params = new URLSearchParams(window.location.search);
 
-        // LIFF初期化
         liff.init({ liffId: LIFF_ID }).then(() => {
-            if (!liff.isLoggedIn()) {
-                liff.login();
-            } else {
-                liff.getProfile().then(p => uid = p.userId);
-            }
-
-            // 特殊URL判定 (?reason=school の場合)
-            if (params.get('reason') === 'school') {
-                const sel = document.getElementById('reason');
-                const opt = document.createElement('option');
-                opt.value = opt.text = "スクール都合（祝日・講師都合など）";
-                sel.add(opt, 0);
-                sel.value = opt.value;
-                sel.disabled = true; // ユーザーは変更不可
-            }
+            if (!liff.isLoggedIn()) liff.login();
+            liff.getProfile().then(p => uid = p.userId);
         });
+
+        function updateTransferConstraints() {
+            const dVal = document.getElementById('date_off').value;
+            if (!dVal) return;
+            const d = new Date(dVal);
+            const first = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString().split('T')[0];
+            const last = new Date(d.getFullYear(), d.getMonth() + 2, 0).toISOString().split('T')[0];
+            document.querySelectorAll('.t-date').forEach(el => { el.min = first; el.max = last; });
+            document.getElementById('date_on_1').value = first;
+        }
+
+        function toggleUI() {
+            const needs = document.querySelector('input[name="needs_transfer"]:checked').value;
+            const type = document.querySelector('input[name="type"]:checked').value;
+            document.getElementById('transfer_section').className = (needs === "いいえ") ? "hidden" : "";
+            document.getElementById('date_extra_area').className = (type === "30min") ? "" : "hidden";
+        }
 
         function submitForm() {
             const name = document.getElementById('name').value;
             const d_off = document.getElementById('date_off').value;
-            const reason = document.getElementById('reason').value;
-            const d_on = document.getElementById('date_on').value;
+            if (!name || !d_off) return alert("お名前と欠席日を入力してください");
 
-            if (!name || !d_off || !d_on) return alert("すべての項目を入力してください");
-            
-            if (!confirm(`${name}様、申請を送信してもよろしいですか？`)) return;
+            const needs = document.querySelector('input[name="needs_transfer"]:checked').value;
+            const type = document.querySelector('input[name="type"]:checked').value;
+            const d1 = document.getElementById('date_on_1').value;
 
-            document.getElementById('loading').style.display = "block";
-            
-            fetch(GAS_URL, {
-                method: "POST",
-                mode: "no-cors",
-                body: JSON.stringify({ userId: uid, name, date_off: d_off, reason, date_on: d_on })
-            }).then(() => {
-                alert("送信が完了しました！\nLINEに届く通知をご確認ください。");
-                liff.closeWindow();
-            }).catch(e => {
-                alert("エラーが発生しました。時間を置いて再度お試しください。");
-                document.getElementById('loading').style.display = "none";
-            });
+            if (needs === "はい" && !d1) return alert("振替希望日を選択してください");
+
+            const data = {
+                userId: uid, name, date_off: d_off,
+                reason: "自己都合",
+                reason_detail: document.getElementById('reason_detail').value,
+                needs_transfer: needs,
+                transfer_type: (needs === "はい") ? type : "",
+                date_on_1: (needs === "はい") ? d1 : "",
+                date_on_2: (needs === "はい" && type === "30min") ? document.getElementById('date_on_2').value : "",
+                date_on_3: (needs === "はい" && type === "30min") ? document.getElementById('date_on_3').value : ""
+            };
+
+            document.getElementById('loading').className = "";
+            fetch(GAS_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(data) })
+            .then(() => { alert("申請が完了しました。"); liff.closeWindow(); });
         }
     </script>
 </body>
