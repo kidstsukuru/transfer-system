@@ -263,6 +263,7 @@
     </div>
 
     <script>
+        // LIFF IDとGAS URLは設定済みのものです
         const LIFF_ID = "2009156481-8H1NbFct"; 
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwtUpL1o6CShQv59ey4ZOcW95iIeJ9Y9Y9rcUEXO7dMHVmII4GBe0ep-Rj2Ax7zRQsv/exec"; 
 
@@ -308,6 +309,7 @@
             }
         }
 
+        // 送信処理（IDのズレを修正・エラー処理を追加）
         async function doSubmit() {
             const name = document.getElementById('name').value;
             const d_off = document.getElementById('date_off').value;
@@ -324,29 +326,40 @@
             btn.disabled = true;
             btn.innerText = "送信中...";
 
-            const profile = await liff.getProfile();
-            const data = {
-                userId: profile.userId,
-                name: name,
-                date_off: d_off,
-                reason: "自己都合",
-                reason_detail: document.getElementById('detail').value,
-                needs_transfer: needEl.value,
-                transfer_type: (needEl.value === "はい") ? document.querySelector('input[name="type"]:checked').value : "",
-                date_on_1: (needEl.value === "はい") ? document.getElementById('d1').value : "",
-                date_on_2: document.getElementById('d2').value,
-                date_on_3: document.getElementById('d3').value
-            };
+            try {
+                // LIFFからプロファイル情報を取得
+                const profile = await liff.getProfile();
+                
+                // 送信データを作成（★ここで reason_detail を正しく取得）
+                const data = {
+                    userId: profile.userId,
+                    name: name,
+                    date_off: d_off,
+                    reason: "自己都合",
+                    reason_detail: document.getElementById('reason_detail').value,
+                    needs_transfer: needEl.value,
+                    transfer_type: (needEl.value === "はい") ? document.querySelector('input[name="type"]:checked').value : "",
+                    date_on_1: (needEl.value === "はい") ? document.getElementById('d1').value : "",
+                    date_on_2: document.getElementById('d2').value,
+                    date_on_3: document.getElementById('d3').value
+                };
 
-            fetch(GAS_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(data) })
-            .then(() => {
+                // GASへデータを送信
+                await fetch(GAS_URL, { 
+                    method: "POST", 
+                    mode: "no-cors", 
+                    body: JSON.stringify(data) 
+                });
+
                 alert("送信が完了しました！LINEをご確認ください。");
                 liff.closeWindow();
-            }).catch(e => {
-                alert("送信に失敗しました。電波の良い場所で再度お試しください。");
+
+            } catch (error) {
+                console.error("エラー:", error);
+                alert("送信に失敗しました。LINEアプリ内から開いているか確認し、電波の良い場所で再度お試しください。");
                 btn.disabled = false;
                 btn.innerText = "この内容で申請を送信する";
-            });
+            }
         }
     </script>
 </body>
