@@ -10,23 +10,21 @@
         .logo { text-align: center; font-weight: bold; color: #FFD700; font-size: 2em; margin-bottom: 10px; }
         .info { background: #fff9e6; padding: 12px; border-radius: 8px; font-size: 0.85em; margin-bottom: 15px; border: 1px solid #FFD700; line-height: 1.5; }
         label { display: block; margin-top: 15px; font-weight: bold; font-size: 0.9em; }
-        .sub-label { font-size: 0.75em; color: #888; font-weight: normal; margin-left: 5px; }
         input, select, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; background: #fafafa; }
-        input:disabled { background-color: #eee; cursor: not-allowed; }
+        input:disabled { background-color: #eee; color: #999; }
         .radio-group { display: flex; gap: 10px; margin-top: 10px; }
         .radio-group label { flex: 1; text-align: center; background: #f0f0f0; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: normal; margin: 0; }
         .radio-group input { display: none; }
         .radio-group input:checked + label { background: #FFD700; font-weight: bold; }
         button { width: 100%; padding: 16px; background-color: #FFD700; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; margin-top: 25px; box-shadow: 0 4px 0 #e6c200; cursor: pointer; }
-        .hidden { display: none; }
     </style>
 </head>
 <body>
     <div class="card">
         <div class="logo">ツクル</div>
         <div class="info">
-            ● 振替は<b>欠席した月の翌月</b>の日程からお選びください。<br>
-            ● 翌月の通常授業に時間を追加（＋30分）して受講いただけます。
+            ● 振替は<b>欠席した月の翌月</b>のみ可能です。<br>
+            ● 翌月の通常授業に時間を追加して受講いただけます。
         </div>
         
         <label>生徒のお名前</label>
@@ -36,7 +34,7 @@
         <input type="date" id="date_off" onchange="updateConstraints()">
 
         <label>具体的な理由</label>
-        <textarea id="detail" rows="2" placeholder="体調不良のため、等"></textarea>
+        <textarea id="detail" rows="2"></textarea>
 
         <label>振替を希望しますか？</label>
         <div class="radio-group">
@@ -51,56 +49,55 @@
                 <input type="radio" name="type" id="t30" value="30min" onclick="ui()"><label for="t30">30分ずつ追加</label>
             </div>
             
-            <div id="date_inputs">
-                <label>振替希望日1 <span class="sub-label">（必須）</span></label>
-                <input type="date" id="d1" class="t-date" disabled>
-                
-                <div id="extra" class="hidden">
-                    <label>振替希望日2 <span class="sub-label">（任意）</span></label>
-                    <input type="date" id="d2" class="t-date" disabled>
-                    <label>振替希望日3 <span class="sub-label">（任意）</span></label>
-                    <input type="date" id="d3" class="t-date" disabled>
-                </div>
+            <label id="label_d1">振替希望日1（翌月必須）</label>
+            <input type="date" id="d1" class="t-date" disabled>
+            
+            <div id="extra" class="hidden">
+                <label>振替希望日2（翌月任意）</label><input type="date" id="d2" class="t-date" disabled>
+                <label>振替希望日3（翌月任意）</label><input type="date" id="d3" class="t-date" disabled>
             </div>
         </div>
 
         <button onclick="send()">申請を送信する</button>
-        <div id="loading" class="hidden" style="text-align:center; margin-top:10px;">送信中...</div>
+        <div id="loading" style="display:none; text-align:center; margin-top:10px;">送信中...</div>
     </div>
 
     <script>
-        const LIFF_ID = "2009156481-8H1NbFct"; 
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyM7_zSYGPJESEGLJmAUjwLVMYTZQ3ry12omznEDbTtGRr6Xq3ni3AdR5_5A9hhnyJq/exec"; 
+        const LIFF_ID = "あなたのLIFF ID"; 
+        const GAS_URL = "あなたのGASウェブアプリURL"; 
 
         liff.init({ liffId: LIFF_ID }).then(() => {
             if (!liff.isLoggedIn()) liff.login();
         });
 
-        // 欠席日に合わせて振替日のカレンダー範囲を翌月に固定
+        // 欠席日に基づいて振替可能範囲（翌月の1日〜末日）を計算
         function updateConstraints() {
             const dVal = document.getElementById('date_off').value;
             if (!dVal) return;
 
-            const d = new Date(dVal);
+            const offDate = new Date(dVal);
             // 翌月の1日
-            const first = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString().split('T')[0];
+            const minDate = new Date(offDate.getFullYear(), offDate.getMonth() + 1, 1);
             // 翌月の末日
-            const last = new Date(d.getFullYear(), d.getMonth() + 2, 0).toISOString().split('T')[0];
+            const maxDate = new Date(offDate.getFullYear(), offDate.getMonth() + 2, 0);
+
+            const minStr = minDate.toISOString().split('T')[0];
+            const maxStr = maxDate.toISOString().split('T')[0];
 
             document.querySelectorAll('.t-date').forEach(el => {
-                el.min = first;
-                el.max = last;
-                el.disabled = false; // 欠席日が選ばれたら有効化
-                el.value = ""; // 欠席日が変わったらリセット
+                el.min = minStr;
+                el.max = maxStr;
+                el.disabled = false;
+                el.value = ""; // 欠席日が変わるたびにリセットして誤入力を防ぐ
             });
-            document.getElementById('d1').value = first; // 1日目は初期値をセット
+            document.getElementById('d1').value = minStr; // 1日目はデフォルトで翌月1日をセット
         }
 
         function ui() {
             const need = document.querySelector('input[name="need"]:checked').value;
             const type = document.querySelector('input[name="type"]:checked').value;
-            document.getElementById('t_area').className = (need === "いいえ") ? "hidden" : "";
-            document.getElementById('extra').className = (type === "30min") ? "" : "hidden";
+            document.getElementById('t_area').style.display = (need === "いいえ") ? "none" : "block";
+            document.getElementById('extra').style.display = (type === "30min") ? "block" : "none";
         }
 
         async function send() {
@@ -110,10 +107,23 @@
             const need = document.querySelector('input[name="need"]:checked').value;
 
             if (!name || !d_off) return alert("名前と欠席日を入力してください");
-            if (need === "はい" && !d1) return alert("振替希望日を入力してください");
-
-            document.getElementById('loading').className = "";
             
+            if (need === "はい") {
+                if (!d1) return alert("振替希望日を入力してください");
+                
+                // 【最終防衛ライン】日付の月をチェック
+                const dateOff = new Date(d_off);
+                const dateOn = new Date(d1);
+                const isNextMonth = (dateOn.getFullYear() === dateOff.getFullYear() && dateOn.getMonth() === dateOff.getMonth() + 1) || 
+                                    (dateOn.getFullYear() === dateOff.getFullYear() + 1 && dateOff.getMonth() === 11 && dateOn.getMonth() === 0);
+                
+                if (!isNextMonth) {
+                    alert("振替日は欠席日の「翌月」である必要があります。カレンダーから正しい範囲の日付を選び直してください。");
+                    return;
+                }
+            }
+
+            document.getElementById('loading').style.display = "block";
             const profile = await liff.getProfile();
             const data = {
                 userId: profile.userId, name, date_off: d_off, reason: "自己都合",
