@@ -1,63 +1,182 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>振替申請 | ツクル</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        /* --- 1. 変数設計（役割に応じた色） --- */
         :root {
-            --brand-yellow: #FFD700;   /* ブランド色：ツクル */
-            --action-black: #333333;   /* 操作色：文字・メインボタン */
-            --error-red: #D93025;      /* 注意色：エラー・制約事項 */
-            --bg-gray: #F8F9FA;        /* 背景色：ノイズを減らす */
-            --card-white: #FFFFFF;     /* 土台色 */
-            --border-soft: #E0E0E0;    /* 補助色：境界線 */
+            --brand-yellow: #FFD700;
+            --action-black: #222222;
+            --error-red: #D93025;
+            --bg-gray: #F2F2F7; /* iOS風の背景色 */
+            --card-white: #FFFFFF;
+            --text-main: #1C1C1E;
+            --text-sub: #8E8E93;
+            --border-line: #C6C6C8;
         }
 
-        body { font-family: -apple-system, sans-serif; background-color: var(--bg-gray); margin: 0; color: var(--action-black); line-height: 1.6; }
-        .container { max-width: 480px; margin: 0 auto; padding: 20px; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, "Helvetica Neue", "Hiragino Kaku Gothic ProN", "メイリオ", sans-serif;
+            background-color: var(--bg-gray);
+            margin: 0;
+            padding: 0;
+            color: var(--text-main);
+            -webkit-tap-highlight-color: transparent; /* タップ時の青い枠を消す */
+        }
 
-        /* --- 2. 情報の優先順位（視覚的ヒエラルキー） --- */
-        header { text-align: left; margin-bottom: 24px; border-left: 6px solid var(--brand-yellow); padding-left: 12px; }
-        header h1 { font-size: 20px; margin: 0; font-weight: 800; }
-        header p { font-size: 13px; color: #666; margin: 4px 0 0; }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px 16px 100px 16px; /* 下部に余裕を持たせる */
+        }
 
-        section { background: var(--card-white); border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .section-title { font-size: 14px; font-weight: bold; margin-bottom: 16px; color: #666; display: flex; align-items: center; }
-        .section-title::after { content: ""; flex: 1; height: 1px; background: var(--border-soft); margin-left: 12px; }
+        /* --- ヘッダー --- */
+        header {
+            padding: 24px 0;
+            text-align: center;
+        }
+        .logo-mark {
+            font-size: 28px;
+            font-weight: 900;
+            color: var(--brand-yellow);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+        .school-name {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--text-sub);
+            letter-spacing: 1px;
+        }
 
-        /* --- 3. 入力フィールド（実運用での破綻防止） --- */
+        /* --- カードスタイル --- */
+        section {
+            background: var(--card-white);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .section-header {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--text-sub);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+        }
+        .section-header::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--border-line);
+            margin-left: 12px;
+            opacity: 0.3;
+        }
+
+        /* --- 入力要素（モバイル最適化） --- */
         .field { margin-bottom: 20px; }
-        label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; }
+        label { 
+            display: block; 
+            font-size: 14px; 
+            font-weight: 600; 
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+        /* 入力欄のフォントサイズを16pxにすることでiOSのズームを防止 */
         input[type="text"], input[type="date"], textarea, select {
-            width: 100%; padding: 14px; border: 1.5px solid var(--border-soft); border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #fff; appearance: none;
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--border-line);
+            border-radius: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+            background: #fff;
+            -webkit-appearance: none; /* iOSのデフォルトスタイルをリセット */
         }
-        input:focus, textarea:focus { border-color: var(--brand-yellow); outline: none; background: #fffdf0; }
-        
-        /* 注意が必要な制約事項 */
-        .constraint { color: var(--error-red); font-size: 12px; font-weight: bold; margin-top: 6px; display: flex; align-items: flex-start; }
-        .constraint::before { content: "⚠️"; margin-right: 4px; }
-
-        /* --- 4. 意思決定ボタン（状態を色で表現） --- */
-        .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .option-card { position: relative; }
-        .option-card input { display: none; }
-        .option-card label {
-            display: block; padding: 16px; text-align: center; border: 1.5px solid var(--border-soft); border-radius: 10px; cursor: pointer; font-size: 15px; background: #fff; transition: all 0.2s;
-        }
-        .option-card input:checked + label {
-            background-color: var(--brand-yellow); border-color: var(--brand-yellow); font-weight: bold; box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+        input:focus, textarea:focus {
+            border-color: var(--brand-yellow);
+            outline: none;
+            background: #fffdf0;
         }
 
-        /* --- 5. プログレッシブ・ディスクロージャー（最初は隠す） --- */
-        #transfer_flow { display: none; margin-top: 16px; border-top: 2px solid var(--brand-yellow); padding-top: 24px; animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* --- 選択ボタン（親指で押しやすいカード型） --- */
+        .choice-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .choice-item input { display: none; }
+        .choice-item label {
+            display: block;
+            padding: 18px 10px;
+            text-align: center;
+            background: #fff;
+            border: 1px solid var(--border-line);
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: all 0.2s;
+        }
+        .choice-item input:checked + label {
+            background-color: var(--brand-yellow);
+            border-color: var(--brand-yellow);
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+            transform: translateY(-1px);
+        }
 
+        /* --- 段階的開示 --- */
+        #makeup_section {
+            display: none;
+            margin-top: 10px;
+            animation: slideDown 0.3s ease-out;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-text {
+            color: var(--error-red);
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* --- 送信ボタン（最重要アクション） --- */
+        .footer-action {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px); /* iOS風の透過 */
+            padding: 16px;
+            border-top: 1px solid var(--border-line);
+            z-index: 100;
+        }
         .submit-btn {
-            width: 100%; padding: 18px; background: var(--action-black); color: #fff; border: none; border-radius: 12px; font-size: 17px; font-weight: bold; margin-top: 32px; box-shadow: 0 4px 14px rgba(0,0,0,0.2); transition: 0.2s;
+            width: 100%;
+            max-width: 468px;
+            margin: 0 auto;
+            display: block;
+            padding: 18px;
+            background: var(--action-black);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
         }
-        .submit-btn:active { transform: scale(0.98); }
+        .submit-btn:active { transform: scale(0.97); opacity: 0.8; }
         .submit-btn:disabled { background: #ccc; box-shadow: none; }
 
         .hidden { display: none; }
@@ -66,80 +185,81 @@
 <body>
     <div class="container">
         <header>
-            <h1>振替申請</h1>
-            <p>Programming School ツクル</p>
+            <div class="logo-mark">ツクル</div>
+            <div class="school-name">Programming School</div>
         </header>
 
         <section>
-            <div class="section-title">欠席の状況</div>
+            <div class="section-header">基本情報</div>
             <div class="field">
                 <label>生徒のお名前</label>
                 <input type="text" id="name" placeholder="フルネームを入力">
             </div>
             <div class="field">
-                <label>お休みする日</label>
-                <input type="date" id="date_off" onchange="initTransferConstraints()">
+                <label>欠席する日</label>
+                <input type="date" id="date_off" onchange="setMakeupLimits()">
             </div>
             <div class="field">
-                <label>具体的な理由（任意）</label>
-                <textarea id="detail" rows="2" placeholder="体調不良のため、等"></textarea>
+                <label>理由（任意）</label>
+                <textarea id="reason_detail" rows="2" placeholder="例：体調不良のため"></textarea>
             </div>
         </section>
 
         <section>
-            <div class="section-title">振替の希望</div>
+            <div class="section-header">振替の希望</div>
             <label>振替授業を希望されますか？</label>
-            <div class="option-grid">
-                <div class="option-card">
-                    <input type="radio" name="need" id="n" value="いいえ" checked onclick="toggleFlow()">
-                    <label for="n">希望しない</label>
+            <div class="choice-grid">
+                <div class="choice-item">
+                    <input type="radio" name="needs_transfer" id="no" value="いいえ" onclick="handleChoice()">
+                    <label for="no">希望しない</label>
                 </div>
-                <div class="option-card">
-                    <input type="radio" name="need" id="y" value="はい" onclick="toggleFlow()">
-                    <label for="y">希望する</label>
+                <div class="choice-item">
+                    <input type="radio" name="needs_transfer" id="yes" value="はい" onclick="handleChoice()">
+                    <label for="yes">希望する</label>
                 </div>
             </div>
         </section>
 
-        <div id="transfer_flow">
-            <section>
-                <div class="section-title">振替の日程調整</div>
+        <div id="makeup_section">
+            <section style="border: 2px solid var(--brand-yellow);">
+                <div class="section-header" style="color: var(--action-black);">振替スケジュール調整</div>
                 
                 <div class="field">
-                    <label>受講形式</label>
-                    <div class="option-grid">
-                        <div class="option-card">
-                            <input type="radio" name="type" id="t90" value="90min" checked onclick="toggleFlow()">
+                    <label>振替の形式</label>
+                    <div class="choice-grid">
+                        <div class="choice-item">
+                            <input type="radio" name="type" id="t90" value="90min" checked onclick="handleChoice()">
                             <label for="t90">90分 × 1回</label>
                         </div>
-                        <div class="option-card">
-                            <input type="radio" name="type" id="t30" value="30min" onclick="toggleFlow()">
+                        <div class="choice-item">
+                            <input type="radio" name="type" id="t30" value="30min" onclick="handleChoice()">
                             <label for="t30">30分ずつ追加</label>
                         </div>
                     </div>
                 </div>
 
                 <div class="field">
-                    <label id="date_label_1">振替希望日 1</label>
+                    <label id="date_label_1">振替日</label>
                     <input type="date" id="d1" class="t-date" disabled>
-                    <div class="constraint">欠席日の翌月のみ選択可能です。</div>
+                    <div class="alert-text">⚠️ 欠席日の翌月のみ選択可能です</div>
                 </div>
 
-                <div id="split_dates" class="hidden">
+                <div id="extra_dates" class="hidden">
                     <div class="field">
-                        <label>振替希望日 2（任意）</label>
+                        <label>振替日 2（任意）</label>
                         <input type="date" id="d2" class="t-date" disabled>
                     </div>
                     <div class="field">
-                        <label>振替希望日 3（任意）</label>
+                        <label>振替日 3（任意）</label>
                         <input type="date" id="d3" class="t-date" disabled>
                     </div>
                 </div>
             </section>
         </div>
 
-        <button class="submit-btn" id="submit_trigger" onclick="handleSend()">申請内容を送信する</button>
-        <p style="text-align:center; font-size:12px; color:#999; margin-top:16px;">※送信後、LINEに確認メッセージが届きます。</p>
+        <div class="footer-action">
+            <button class="submit-btn" id="btn_submit" onclick="doSubmit()">この内容で申請を送信する</button>
+        </div>
     </div>
 
     <script>
@@ -150,50 +270,57 @@
             if (!liff.isLoggedIn()) liff.login();
         });
 
-        // 日付の制約（翌月のみ）をセット
-        function initTransferConstraints() {
-            const offVal = document.getElementById('date_off').value;
-            if (!offVal) return;
-
-            const d = new Date(offVal);
-            const first = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString().split('T')[0];
-            const last = new Date(d.getFullYear(), d.getMonth() + 2, 0).toISOString().split('T')[0];
+        // 欠席日の翌月に制限
+        function setMakeupLimits() {
+            const val = document.getElementById('date_off').value;
+            if (!val) return;
+            const off = new Date(val);
+            const start = new Date(off.getFullYear(), off.getMonth() + 1, 1).toISOString().split('T')[0];
+            const end = new Date(off.getFullYear(), off.getMonth() + 2, 0).toISOString().split('T')[0];
 
             document.querySelectorAll('.t-date').forEach(el => {
-                el.min = first;
-                el.max = last;
-                el.disabled = false;
-                el.value = "";
+                el.min = start; el.max = end; el.disabled = false; el.value = "";
             });
-            document.getElementById('d1').value = first;
+            document.getElementById('d1').value = start;
         }
 
-        // 表示の切り替え
-        function toggleFlow() {
-            const need = document.querySelector('input[name="need"]:checked').value;
+        // 選択に応じたUI表示とスクロール
+        function handleChoice() {
+            const needEl = document.querySelector('input[name="needs_transfer"]:checked');
+            if (!needEl) return;
+
+            const need = needEl.value;
             const type = document.querySelector('input[name="type"]:checked').value;
-            const flow = document.getElementById('transfer_flow');
-            const split = document.getElementById('split_dates');
+            const section = document.getElementById('makeup_section');
+            const extra = document.getElementById('extra_dates');
 
             if (need === "はい") {
-                flow.style.display = "block";
-                split.style.display = (type === "30min") ? "block" : "none";
-                document.getElementById('date_label_1').innerText = (type === "30min") ? "振替希望日 1" : "振替希望日";
-                // 自然な視線誘導のためのスクロール
-                setTimeout(() => flow.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                section.style.display = "block";
+                extra.style.display = (type === "30min") ? "block" : "none";
+                document.getElementById('date_label_1').innerText = (type === "30min") ? "振替日 1" : "振替日";
+                
+                // モバイルで入力エリアが隠れないようにスクロール
+                setTimeout(() => {
+                    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
             } else {
-                flow.style.display = "none";
+                section.style.display = "none";
             }
         }
 
-        async function handleSend() {
+        async function doSubmit() {
             const name = document.getElementById('name').value;
             const d_off = document.getElementById('date_off').value;
-            const need = document.querySelector('input[name="need"]:checked').value;
-            const btn = document.getElementById('submit_trigger');
+            const needEl = document.querySelector('input[name="needs_transfer"]:checked');
+            const btn = document.getElementById('btn_submit');
 
             if (!name || !d_off) return alert("お名前と欠席日を入力してください。");
+            if (!needEl) return alert("振替を希望されるか選択してください。");
             
+            if (needEl.value === "はい" && !document.getElementById('d1').value) {
+                return alert("振替希望日を入力してください。");
+            }
+
             btn.disabled = true;
             btn.innerText = "送信中...";
 
@@ -204,21 +331,21 @@
                 date_off: d_off,
                 reason: "自己都合",
                 reason_detail: document.getElementById('detail').value,
-                needs_transfer: need,
-                transfer_type: (need === "はい") ? document.querySelector('input[name="type"]:checked').value : "",
-                date_on_1: (need === "はい") ? document.getElementById('d1').value : "",
+                needs_transfer: needEl.value,
+                transfer_type: (needEl.value === "はい") ? document.querySelector('input[name="type"]:checked').value : "",
+                date_on_1: (needEl.value === "はい") ? document.getElementById('d1').value : "",
                 date_on_2: document.getElementById('d2').value,
                 date_on_3: document.getElementById('d3').value
             };
 
             fetch(GAS_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(data) })
             .then(() => {
-                alert("送信が完了しました。LINEをご確認ください。");
+                alert("送信が完了しました！LINEをご確認ください。");
                 liff.closeWindow();
             }).catch(e => {
-                alert("エラーが発生しました。");
+                alert("送信に失敗しました。電波の良い場所で再度お試しください。");
                 btn.disabled = false;
-                btn.innerText = "申請内容を送信する";
+                btn.innerText = "この内容で申請を送信する";
             });
         }
     </script>
